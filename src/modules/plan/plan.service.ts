@@ -1,26 +1,32 @@
 import { Injectable } from '@nestjs/common';
+// import { CreatePlanDto } from './dto/create-plan.dto';
+// import { UpdatePlanDto } from './dto/update-plan.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Plan } from 'src/entities/plans.entity';
+import { Repository } from 'typeorm';
 import { CreatePlanDto } from './dto/create-plan.dto';
-import { UpdatePlanDto } from './dto/update-plan.dto';
 
 @Injectable()
 export class PlanService {
-  create(createPlanDto: CreatePlanDto) {
-    return 'This action adds a new plan';
-  }
+  constructor(
+    @InjectRepository(Plan)
+    private userRepository: Repository<Plan>,
+  ) {}
 
-  findAll() {
-    return `This action returns all plan`;
+  // Lấy danh sách Gói dịch vụ
+  async getAll(): Promise<Plan[]> {
+    return this.userRepository.find();
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} plan`;
+  // Xem chi tiết Gói dịch vụ theo id
+  async getById(id: number): Promise<Plan[]> {
+    return this.userRepository.findBy({ id });
   }
-
-  update(id: number, updatePlanDto: UpdatePlanDto) {
-    return `This action updates a #${id} plan`;
+  // Tạo Gói mới
+  async createNew(createDto: CreatePlanDto): Promise<Plan> {
+    return this.userRepository.create(createDto);
   }
-
-  remove(id: number) {
-    return `This action removes a #${id} plan`;
+  // Xem list Gói của user
+  async getByUser(userId: number): Promise<Plan[]> {
+    return this.userRepository.findBy({ vendor_id: userId });
   }
 }

@@ -1,42 +1,29 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { PlanService } from './plan.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
-import { UpdatePlanDto } from './dto/update-plan.dto';
+// import { UpdatePlanDto } from './dto/update-plan.dto';
 
-@Controller('plan')
+@Controller('plans')
 export class PlanController {
   constructor(private readonly planService: PlanService) {}
-
+  // tạo mới gói
   @Post()
-  create(@Body() createPlanDto: CreatePlanDto) {
-    return this.planService.create(createPlanDto);
+  create(@Body() createDto: CreatePlanDto) {
+    return this.planService.createNew(createDto);
   }
-
+  // Lấy tất cả
   @Get()
   findAll() {
-    return this.planService.findAll();
+    return this.planService.getAll();
   }
-
+  // Lấy Gói theo id
+  // +id tức ép sang kiểu numberF
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.planService.findOne(+id);
+    return this.planService.getById(+id);
   }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePlanDto: UpdatePlanDto) {
-    return this.planService.update(+id, updatePlanDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.planService.remove(+id);
+  @Get('user/:userId')
+  getByUser(@Param('userId') userId: string) {
+    return this.planService.getByUser(+userId);
   }
 }
