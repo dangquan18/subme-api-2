@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './modules/auth/auth.module';
+import { PlanModule } from './modules/plan/plan.module';
+import { SubcriptionModule } from './modules/subcription/subcription.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { NotificationModule } from './modules/notification/notification.module';
 // ... các import khác
 
 @Module({
@@ -22,6 +27,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       }),
       inject: [ConfigService],
     }),
+    AuthModule,
+    PlanModule,
+    SubcriptionModule,
+    PaymentModule,
+    NotificationModule,
   ],
   // ... controllers và providers
 })
