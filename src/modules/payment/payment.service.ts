@@ -18,7 +18,10 @@ export class PaymentService {
   // Tạo bản ghi Payment mới
   async createPayment(createPaymentDto: CreatePaymentDto) {
     try {
-      const record = this.paymentRepo.create(createPaymentDto);
+      const record = this.paymentRepo.create({
+        ...createPaymentDto,
+        amount: 10,
+      }); // tạm thời set sẵn amount
       const savedPayment = await this.paymentRepo.save(record);
 
       // payment tạo mới -> subscription.status = active
