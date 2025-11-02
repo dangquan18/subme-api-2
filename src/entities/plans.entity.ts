@@ -10,9 +10,6 @@ import {
 import { Vendor } from './vendors.entity';
 import { Category } from './categories.entity';
 import { Subscription } from './subscriptions.entity';
-// import { Vendor } from './vendor.entity';
-// import { Category } from './category.entity';
-// import { Subscription } from './subscription.entity';
 
 @Entity('plans')
 export class Plan {

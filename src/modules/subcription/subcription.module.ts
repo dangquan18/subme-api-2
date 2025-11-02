@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
-import { SubcriptionService } from './subcription.service';
-import { SubcriptionController } from './subcription.controller';
+import { SubscriptionService } from './subcription.service';
+import { SubscriptionController } from './subcription.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Subscription } from 'src/entities/subscriptions.entity';
+// import { Subcription } from './entities/subcription.entity';
 
 @Module({
-  controllers: [SubcriptionController],
-  providers: [SubcriptionService],
+  imports: [TypeOrmModule.forFeature([Subscription])],
+  controllers: [SubscriptionController],
+  providers: [SubscriptionService],
 })
 export class SubcriptionModule {}

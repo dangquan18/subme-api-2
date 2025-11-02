@@ -1,45 +1,23 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
-import { SubcriptionService } from './subcription.service';
+import { Controller, Post, Body, Get } from '@nestjs/common';
+import { SubscriptionService } from './subcription.service';
 import { CreateSubcriptionDto } from './dto/create-subcription.dto';
-import { UpdateSubcriptionDto } from './dto/update-subcription.dto';
+// import { UpdateSubcriptionDto } from './dto/update-subcription.dto';
 
-@Controller('subcription')
-export class SubcriptionController {
-  constructor(private readonly subcriptionService: SubcriptionService) {}
+@Controller('subscription')
+export class SubscriptionController {
+  constructor(private readonly subscriptionService: SubscriptionService) {}
 
   @Post()
   create(@Body() createSubcriptionDto: CreateSubcriptionDto) {
-    return this.subcriptionService.create(createSubcriptionDto);
+    return this.subscriptionService.createNew(createSubcriptionDto);
   }
-
   @Get()
   findAll() {
-    return this.subcriptionService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.subcriptionService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateSubcriptionDto: UpdateSubcriptionDto,
-  ) {
-    return this.subcriptionService.update(+id, updateSubcriptionDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.subcriptionService.remove(+id);
+    try {
+      return this.subscriptionService.findAll();
+    } catch (err) {
+      console.log(err.message);
+      throw err;
+    }
   }
 }
