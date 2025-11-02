@@ -17,7 +17,7 @@ export class PlanController {
     return this.planService.getAll();
   }
   // Lấy Gói theo id
-  // +id tức ép sang kiểu numberF
+  // +id tức ép sang kiểu number
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.planService.getById(+id);

@@ -1,26 +1,36 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm';
+import { User } from 'src/entities/users.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private jwtService: JwtService,
+    @InjectRepository(User)
+    private accountRepository: Repository<User>,
+  ) {}
+  findByEmail(email: string): Promise<User> {
+    return this.accountRepository.findOne({ where: { email } });
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  // Kiểm tra có tài khoản không -> trả về access_token = jwt
+  async validateUser(email: string, pass: string): Promise<any> {
+    const user = await this.findByEmail(email);
+    if (!user || user.password !== pass) {
+      throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...result } = user;
+    return result;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async login(user: any) {
+    const payload = { email: user.email, sub: user.id, role: user.role };
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
   }
 }
