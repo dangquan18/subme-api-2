@@ -36,6 +36,7 @@ export class SubscriptionService {
     // Tạo bản ghi Subscription
     const createRecord = this.repo.create({
       ...dto,
+      // user_id: user_id,
       start_date,
       end_date,
     });

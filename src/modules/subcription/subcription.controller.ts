@@ -9,6 +9,8 @@ export class SubscriptionController {
 
   @Post()
   create(@Body() createSubcriptionDto: CreateSubcriptionDto) {
+    // const user_id = req.user.user_id;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return this.subscriptionService.createNew(createSubcriptionDto);
   }
   @Get()
