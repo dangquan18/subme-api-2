@@ -26,7 +26,8 @@ export class Payment {
   @Column({
     type: 'enum',
     enum: ['success', 'pending', 'failed'],
-    default: 'pending',
+    default: 'success',
+    // tạm thời default là success vì chưa tích hợp thành toán từ bên thứ 3 . nên chưa cập nhật status chính xác được F
   })
   status: 'success' | 'pending' | 'failed';
 
