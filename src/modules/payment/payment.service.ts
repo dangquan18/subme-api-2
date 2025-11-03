@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from 'src/entities/payments.entity';
 import { Subscription } from 'src/entities/subscriptions.entity';
+import { Notification } from 'src/entities/notifications.entity';
 
 @Injectable()
 export class PaymentService {
@@ -14,6 +15,8 @@ export class PaymentService {
 
     @InjectRepository(Subscription)
     private SubscriptionRepo: Repository<Subscription>,
+    @InjectRepository(Notification)
+    private notiRepo: Repository<Notification>,
   ) {}
   // Tạo bản ghi Payment mới
   async createPayment(createPaymentDto: CreatePaymentDto) {
@@ -28,6 +31,21 @@ export class PaymentService {
       await this.SubscriptionRepo.update(createPaymentDto.subscription_id, {
         status: 'active',
       });
+
+      // Tạo thông báo
+      const subscription = await this.SubscriptionRepo.findOne({
+        where: { id: createPaymentDto.subscription_id },
+        select: ['id', 'user_id'],
+      });
+
+      const user_id = subscription.user_id;
+      const createRepo = this.notiRepo.create({
+        user_id: user_id,
+        title: 'Thanh toán thành công',
+        message: `Thanh toán cho đăng ký #${subscription.id} đã được thực hiện thành công.`,
+      });
+      await this.notiRepo.save(createRepo);
+
       const subscriptionByID = await this.SubscriptionRepo.findOne({
         where: { id: createPaymentDto.subscription_id },
       });
