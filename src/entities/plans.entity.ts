@@ -31,12 +31,13 @@ export class Plan {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
-  @Column({ type: 'enum', enum: ['day', 'week', 'month', 'year'] })
-  duration_unit: 'day' | 'week' | 'month' | 'year';
+  @Column({ type: 'enum', enum: ['ngày', 'tuần', 'tháng', 'năm'] })
+  duration_unit: 'ngày' | 'tuần' | 'tháng' | 'năm';
 
   @Column({ type: 'int' })
   duration_value: number;
-
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  imageUrl?: string;
   @Column({
     type: 'enum',
     enum: ['pending', 'approved', 'rejected'],
@@ -48,16 +49,16 @@ export class Plan {
   createdAt: Date;
 
   // Relations
-  @ManyToOne(() => Vendor, vendor => vendor.plans, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Vendor, (vendor) => vendor.plans, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vendor_id' })
   vendor: Vendor;
 
-  @ManyToOne(() => Category, category => category.plans, {
+  @ManyToOne(() => Category, (category) => category.plans, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'category_id' })
   category: Category;
 
-  @OneToMany(() => Subscription, subscription => subscription.plan)
+  @OneToMany(() => Subscription, (subscription) => subscription.plan)
   subscriptions: Subscription[];
 }

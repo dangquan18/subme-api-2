@@ -6,7 +6,7 @@ import { PlanModule } from './modules/plan/plan.module';
 import { SubcriptionModule } from './modules/subcription/subcription.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { NotificationModule } from './modules/notification/notification.module';
-// ... các import khác
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -32,6 +32,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     SubcriptionModule,
     PaymentModule,
     NotificationModule,
+    UserModule,
   ],
   // ... controllers và providers
 })
