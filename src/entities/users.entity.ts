@@ -28,6 +28,14 @@ export class User {
 
   @Column({ type: 'enum', enum: ['user', 'admin', 'vendor'], default: 'user' })
   role: 'user' | 'admin' | 'vendor';
+  @Column({ length: 20, nullable: true })
+  phone?: string;
+
+  @Column({ length: 255, nullable: true })
+  address?: string;
+
+  @Column({ type: 'date', nullable: true })
+  date_of_birth?: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
@@ -36,9 +44,9 @@ export class User {
   updatedAt: Date;
 
   // Relations
-  @OneToMany(() => Subscription, subscription => subscription.user)
+  @OneToMany(() => Subscription, (subscription) => subscription.user)
   subscriptions: Subscription[];
 
-  @OneToMany(() => Notification, notification => notification.user)
+  @OneToMany(() => Notification, (notification) => notification.user)
   notifications: Notification[];
 }

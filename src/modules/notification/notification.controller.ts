@@ -1,34 +1,57 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Delete,
+  Param,
+  ParseIntPipe,
+  Body,
+} from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { CreateNotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
 
 @Controller('notification')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  @Post()
-  create(@Body() createNotificationDto: CreateNotificationDto) {
-    return this.notificationService.create(createNotificationDto);
+  // Lấy tất cả thông báo của user
+  @Get('user/:userId')
+  getNotificationsByUser(@Param('userId', ParseIntPipe) userId: number) {
+    return this.notificationService.getNotificationsByUser(userId);
   }
 
-  @Get()
-  findAll() {
-    return this.notificationService.findAll();
+  // Lấy thông báo chưa đọc
+  @Get('user/:userId/unread')
+  getUnreadNotifications(@Param('userId', ParseIntPipe) userId: number) {
+    return this.notificationService.getUnreadNotifications(userId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.notificationService.findOne(+id);
+  // Đánh dấu 1 thông báo đã đọc
+  @Put(':id/read')
+  markAsRead(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('user_id') userId: number,
+  ) {
+    return this.notificationService.markAsRead(id, userId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateNotificationDto: UpdateNotificationDto) {
-    return this.notificationService.update(+id, updateNotificationDto);
+  // Đánh dấu tất cả đã đọc
+  @Put('user/:userId/read-all')
+  markAllAsRead(@Param('userId', ParseIntPipe) userId: number) {
+    return this.notificationService.markAllAsRead(userId);
   }
 
+  // Xóa 1 thông báo
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.notificationService.remove(+id);
+  deleteNotification(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('user_id') userId: number,
+  ) {
+    return this.notificationService.deleteNotification(id, userId);
+  }
+
+  // Xóa tất cả thông báo đã đọc
+  @Delete('user/:userId/read')
+  deleteReadNotifications(@Param('userId', ParseIntPipe) userId: number) {
+    return this.notificationService.deleteReadNotifications(userId);
   }
 }
