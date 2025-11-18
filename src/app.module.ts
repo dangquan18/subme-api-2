@@ -6,6 +6,7 @@ import { PlanModule } from './modules/plan/plan.module';
 import { SubcriptionModule } from './modules/subcription/subcription.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { NotificationModule } from './modules/notification/notification.module';
+// import { JwtModule } from '@nestjs/jwt';
 // ... các import khác
 
 @Module({

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { PlanService } from './plan.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
+// import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 // import { UpdatePlanDto } from './dto/update-plan.dto';
 
 @Controller('plans')
@@ -12,6 +13,7 @@ export class PlanController {
     return this.planService.createNew(createDto);
   }
   // Lấy tất cả
+  // @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
     return this.planService.getAll();
