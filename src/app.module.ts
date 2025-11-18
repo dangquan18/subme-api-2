@@ -32,7 +32,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     SubcriptionModule,
     PaymentModule,
     NotificationModule,
-    UserModule,
+    // UserModule,
   ],
   // ... controllers và providers
 })
