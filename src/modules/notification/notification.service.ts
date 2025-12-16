@@ -24,8 +24,14 @@ export class NotificationService {
 
     const [notifications, total] = await query.getManyAndCount();
 
+    // Format notifications với created_at
+    const formattedNotifications = notifications.map(notification => ({
+      ...notification,
+      created_at: notification.createdAt,
+    }));
+
     return {
-      data: notifications,
+      data: formattedNotifications,
       meta: {
         total,
         page,

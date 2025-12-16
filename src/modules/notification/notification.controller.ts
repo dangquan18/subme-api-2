@@ -24,10 +24,15 @@ export class NotificationController {
   findAll(
     @Request() req,
     @Query('is_read') isRead?: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
   ) {
     const isReadBool = isRead === 'true' ? true : isRead === 'false' ? false : undefined;
+    
+    // ⭐ Parse sang number với default values
+    const page = pageStr ? parseInt(pageStr, 10) : 1;
+    const limit = limitStr ? parseInt(limitStr, 10) : 20;
+    
     return this.notificationService.findAll(req.user.userId, page, limit, isReadBool);
   }
 
@@ -63,4 +68,3 @@ export class NotificationController {
     return this.notificationService.remove(id, req.user.userId);
   }
 }
-

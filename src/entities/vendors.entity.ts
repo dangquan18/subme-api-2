@@ -4,14 +4,20 @@ import {
   Column,
   CreateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Plan } from './plans.entity';
+import { User } from './users.entity';
 // import { Plan } from './plan.entity';
 
 @Entity('vendors')
 export class Vendor {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ nullable: true })
+  user_id: number;
 
   @Column({ length: 150 })
   name: string;
@@ -42,6 +48,10 @@ export class Vendor {
   createdAt: Date;
 
   // Relations
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
   @OneToMany(() => Plan, plan => plan.vendor)
   plans: Plan[];
 }

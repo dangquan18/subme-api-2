@@ -49,8 +49,14 @@ export class PaymentService {
 
     const [payments, total] = await queryBuilder.getManyAndCount();
 
+    // Format payments với created_at
+    const formattedPayments = payments.map(payment => ({
+      ...payment,
+      created_at: payment.createdAt,
+    }));
+
     return {
-      payments,
+      payments: formattedPayments,
       total,
       limit,
       offset,
@@ -75,7 +81,10 @@ export class PaymentService {
       throw new NotFoundException('Payment not found');
     }
 
-    return payment;
+    return {
+      ...payment,
+      created_at: payment.createdAt,
+    };
   }
 
   /**
@@ -259,5 +268,67 @@ export class PaymentService {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  }
+
+  /**
+   * POST /payments/test - Test payment without payment gateway
+   */
+  async testPayment(dto: { subscription_id: number; amount: number }, userId: number) {
+    const { subscription_id, amount } = dto;
+
+    // Check subscription exists and belongs to user
+    const subscription = await this.subscriptionRepo.findOne({
+      where: { id: subscription_id, user_id: userId },
+      relations: ['plan'],
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+
+    // Create payment record with success status
+    const payment = this.paymentRepo.create({
+      subscription_id,
+      amount,
+      method: 'VNPay', // Use VNPay as default for test
+      status: 'success',
+      transaction_id: `TEST-${Date.now()}`,
+    });
+
+    await this.paymentRepo.save(payment);
+
+    // Update subscription status to active
+    const startDate = new Date();
+    const endDate = this.calculateEndDate(
+      startDate,
+      subscription.plan.duration_value,
+      subscription.plan.duration_unit,
+    );
+
+    subscription.status = 'active';
+    subscription.start_date = startDate;
+    subscription.end_date = endDate;
+    await this.subscriptionRepo.save(subscription);
+
+    // Create notification
+    await this.createNotification(
+      userId,
+      'Thanh toán thành công (Test)',
+      `Bạn đã thanh toán thành công cho gói "${subscription.plan.name}". Gói của bạn có hiệu lực từ ${this.formatDate(startDate)} đến ${this.formatDate(endDate)}.`,
+    );
+
+    return {
+      success: true,
+      payment: {
+        ...payment,
+        created_at: payment.createdAt,
+      },
+      subscription: {
+        id: subscription.id,
+        status: subscription.status,
+        start_date: subscription.start_date,
+        end_date: subscription.end_date,
+      },
+    };
   }
 }

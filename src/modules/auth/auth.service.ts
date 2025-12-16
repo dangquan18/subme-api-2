@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException, ConflictExcepti
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/users.entity';
+import { Vendor } from 'src/entities/vendors.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -14,6 +15,8 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Vendor)
+    private vendorRepository: Repository<Vendor>,
   ) {}
 
   async findByEmail(email: string): Promise<User> {
@@ -79,6 +82,21 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(user);
+
+    // If role is vendor, create vendor record
+    if (savedUser.role === 'vendor') {
+      const vendor = this.vendorRepository.create({
+        user_id: savedUser.id,
+        name: savedUser.name,
+        email: savedUser.email,
+        password: hashedPassword,
+        phone: savedUser.phone,
+        address: savedUser.address,
+        status: 'pending',
+      });
+      await this.vendorRepository.save(vendor);
+    }
+
     const { password, ...result } = savedUser;
 
     return {

@@ -25,9 +25,26 @@ export class VendorService {
   ) {}
 
   /**
+   * Helper: Get vendor ID from user ID
+   */
+  private async getVendorIdFromUserId(userId: number): Promise<number> {
+    const vendor = await this.vendorRepo.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found. Please contact admin.');
+    }
+
+    return vendor.id;
+  }
+
+  /**
    * GET /vendor/stats - Thống kê dashboard
    */
-  async getStats(vendorId: number) {
+  async getStats(userId: number) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+    
     // Total revenue
     const revenueResult = await this.paymentRepo
       .createQueryBuilder('payment')
@@ -77,7 +94,8 @@ export class VendorService {
   /**
    * GET /vendor/packages - Danh sách gói của vendor
    */
-  async getPackages(vendorId: number) {
+  async getPackages(userId: number) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
     return this.planRepo.find({
       where: { vendor_id: vendorId },
       relations: ['category'],
@@ -88,7 +106,9 @@ export class VendorService {
   /**
    * POST /vendor/packages - Tạo gói mới
    */
-  async createPackage(vendorId: number, dto: CreatePlanDto) {
+  async createPackage(userId: number, dto: CreatePlanDto) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+
     const plan = this.planRepo.create({
       ...dto,
       vendor_id: vendorId,
@@ -107,7 +127,9 @@ export class VendorService {
   /**
    * PATCH /vendor/packages/:id - Cập nhật gói
    */
-  async updatePackage(id: number, vendorId: number, dto: UpdatePlanDto) {
+  async updatePackage(id: number, userId: number, dto: UpdatePlanDto) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+    
     const plan = await this.planRepo.findOne({
       where: { id, vendor_id: vendorId },
     });
@@ -129,7 +151,9 @@ export class VendorService {
   /**
    * DELETE /vendor/packages/:id - Xóa gói
    */
-  async deletePackage(id: number, vendorId: number) {
+  async deletePackage(id: number, userId: number) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+    
     const plan = await this.planRepo.findOne({
       where: { id, vendor_id: vendorId },
     });
@@ -159,11 +183,13 @@ export class VendorService {
    * GET /vendor/orders - Danh sách đơn hàng/subscriptions
    */
   async getOrders(
-    vendorId: number,
+    userId: number,
     status?: string,
     limit: number = 20,
     offset: number = 0,
   ) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+    
     const queryBuilder = this.subscriptionRepo
       .createQueryBuilder('subscription')
       .leftJoinAndSelect('subscription.user', 'user')
@@ -193,7 +219,9 @@ export class VendorService {
   /**
    * GET /vendor/analytics - Thống kê chi tiết theo thời gian
    */
-  async getAnalytics(vendorId: number, startDate: string, endDate: string) {
+  async getAnalytics(userId: number, startDate: string, endDate: string) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+    
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -223,11 +251,13 @@ export class VendorService {
    * GET /vendor/reviews - Đánh giá các gói
    */
   async getReviews(
-    vendorId: number,
+    userId: number,
     planId?: number,
     limit: number = 20,
     offset: number = 0,
   ) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+    
     const queryBuilder = this.reviewRepo
       .createQueryBuilder('review')
       .leftJoinAndSelect('review.user', 'user')

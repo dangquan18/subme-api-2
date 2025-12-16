@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { ProcessPaymentDto } from './dto/process-payment.dto';
+import { TestPaymentDto } from './dto/test-payment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('payments')
@@ -25,10 +26,14 @@ export class PaymentController {
   @UseGuards(JwtAuthGuard)
   async getHistory(
     @Request() req,
-    @Query('limit', ParseIntPipe) limit: number = 20,
-    @Query('offset', ParseIntPipe) offset: number = 0,
+    @Query('limit') limitStr?: string,
+    @Query('offset') offsetStr?: string,
     @Query('status') status?: 'success' | 'pending' | 'failed',
   ) {
+    // Parse với default values
+    const limit = limitStr ? parseInt(limitStr, 10) : 20;
+    const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+    
     return this.paymentService.getHistory(req.user.userId, limit, offset, status);
   }
 
@@ -61,5 +66,16 @@ export class PaymentController {
   async vnpayCallback(@Query() query: any) {
     return this.paymentService.vnpayCallback(query);
   }
-}
 
+  /**
+   * POST /payments/test - Test thanh toán (không qua payment gateway)
+   */
+  @Post('test')
+  @UseGuards(JwtAuthGuard)
+  async testPayment(
+    @Request() req,
+    @Body() dto: TestPaymentDto,
+  ) {
+    return this.paymentService.testPayment(dto, req.user.userId);
+  }
+}
