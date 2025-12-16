@@ -72,10 +72,12 @@ export class VendorController {
   getOrders(
     @Request() req,
     @Query('status') status?: string,
-    @Query('limit', ParseIntPipe) limit: number = 20,
-    @Query('offset', ParseIntPipe) offset: number = 0,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
   ) {
-    return this.vendorService.getOrders(req.user.userId, status, limit, offset);
+    const finalLimit = limit || 20;
+    const finalOffset = offset || 0;
+    return this.vendorService.getOrders(req.user.userId, status, finalLimit, finalOffset);
   }
 
   /**
@@ -84,8 +86,8 @@ export class VendorController {
   @Get('analytics')
   getAnalytics(
     @Request() req,
-    @Query('start_date') startDate: string,
-    @Query('end_date') endDate: string,
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
   ) {
     return this.vendorService.getAnalytics(req.user.userId, startDate, endDate);
   }
@@ -96,10 +98,12 @@ export class VendorController {
   @Get('reviews')
   getReviews(
     @Request() req,
-    @Query('plan_id', ParseIntPipe) planId?: number,
-    @Query('limit', ParseIntPipe) limit: number = 20,
-    @Query('offset', ParseIntPipe) offset: number = 0,
+    @Query('plan_id') planId?: number,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
   ) {
-    return this.vendorService.getReviews(req.user.userId, planId, limit, offset);
+    const finalLimit = limit || 20;
+    const finalOffset = offset || 0;
+    return this.vendorService.getReviews(req.user.userId, planId, finalLimit, finalOffset);
   }
 }
