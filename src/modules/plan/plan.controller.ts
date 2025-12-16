@@ -1,31 +1,57 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Body, 
+  Param, 
+  Query, 
+  ParseIntPipe,
+  UseGuards,
+  Request,
+  Patch,
+  Delete
+} from '@nestjs/common';
 import { PlanService } from './plan.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
-// import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-// import { UpdatePlanDto } from './dto/update-plan.dto';
+import { GetPackagesDto } from './dto/get-packages.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('plans')
+@Controller('packages')
 export class PlanController {
   constructor(private readonly planService: PlanService) {}
-  // tạo mới gói
-  @Post()
-  create(@Body() createDto: CreatePlanDto) {
-    return this.planService.createNew(createDto);
-  }
-  // Lấy tất cả
-  // @UseGuards(JwtAuthGuard)
+
+  // GET /packages - Danh sách gói với filters
   @Get()
-  findAll() {
-    return this.planService.getAll();
+  async findAll(@Query() query: GetPackagesDto) {
+    return this.planService.findAll(query);
   }
-  // Lấy Gói theo id
-  // +id tức ép sang kiểu number
+
+  // GET /packages/featured - Gói nổi bật
+  @Get('featured')
+  async findFeatured(@Query('limit', ParseIntPipe) limit: number = 10) {
+    return this.planService.findFeatured(limit);
+  }
+
+  // GET /packages/search - Tìm kiếm
+  @Get('search')
+  async search(
+    @Query('q') query: string,
+    @Query('limit', ParseIntPipe) limit: number = 20,
+  ) {
+    return this.planService.search(query, limit);
+  }
+
+  // GET /packages/category/:categoryId - Gói theo category
+  @Get('category/:categoryId')
+  async findByCategory(@Param('categoryId', ParseIntPipe) categoryId: number) {
+    return this.planService.findByCategory(categoryId);
+  }
+
+  // GET /packages/:id - Chi tiết gói
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.planService.getById(+id);
-  }
-  @Get('user/:userId')
-  getByUser(@Param('userId') userId: string) {
-    return this.planService.getByUser(+userId);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.planService.findOne(id);
   }
 }
+

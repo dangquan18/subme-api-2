@@ -16,6 +16,13 @@ export class Notification {
   @Column()
   user_id: number;
 
+  @Column({ 
+    type: 'enum', 
+    enum: ['delivery', 'payment', 'promotion', 'system', 'subscription'],
+    default: 'system'
+  })
+  type: 'delivery' | 'payment' | 'promotion' | 'system' | 'subscription';
+
   @Column({ length: 255 })
   title: string;
 

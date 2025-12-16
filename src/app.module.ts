@@ -6,12 +6,15 @@ import { PlanModule } from './modules/plan/plan.module';
 import { SubcriptionModule } from './modules/subcription/subcription.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { NotificationModule } from './modules/notification/notification.module';
-// ... các import khác
+import { UserModule } from './modules/user/user.module';
+import { CategoryModule } from './modules/category/category.module';
+import { ReviewModule } from './modules/review/review.module';
+import { VendorModule } from './modules/vendor/vendor.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // Cho phép sử dụng ConfigModule ở mọi nơi
+      isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -32,8 +35,10 @@ import { NotificationModule } from './modules/notification/notification.module';
     SubcriptionModule,
     PaymentModule,
     NotificationModule,
-    // UserModule,
+    UserModule,
+    CategoryModule,
+    ReviewModule,
+    VendorModule,
   ],
-  // ... controllers và providers
 })
 export class AppModule {}

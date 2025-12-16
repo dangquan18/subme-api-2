@@ -1,22 +1,47 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request, Patch } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccountDto } from './dto/account.dto';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private authService: AuthService,
-    // private readonly subscriptionService: SubscriptionService,
-  ) {}
-
-  @Post('login')
-  async login(@Body() body: { email: string; password: string }) {
-    const user = await this.authService.validateUser(body.email, body.password);
-    return this.authService.login(user);
-  }
+  constructor(private authService: AuthService) {}
 
   @Post('register')
-  create(@Body() dto: AccountDto) {
+  async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
+  }
+
+  @Post('refresh')
+  async refresh(@Body('refresh_token') refreshToken: string) {
+    return this.authService.refreshToken(refreshToken);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout() {
+    return {
+      success: true,
+      message: 'Đăng xuất thành công',
+    };
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@Request() req) {
+    return this.authService.getMe(req.user.userId);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.userId, changePasswordDto);
   }
 }

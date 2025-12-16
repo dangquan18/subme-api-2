@@ -1,32 +1,216 @@
-import { Injectable } from '@nestjs/common';
-// import { CreatePlanDto } from './dto/create-plan.dto';
-// import { UpdatePlanDto } from './dto/update-plan.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Plan } from 'src/entities/plans.entity';
-import { Repository } from 'typeorm';
+import { Repository, Like, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { CreatePlanDto } from './dto/create-plan.dto';
+import { GetPackagesDto } from './dto/get-packages.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 
 @Injectable()
 export class PlanService {
   constructor(
     @InjectRepository(Plan)
-    private userRepository: Repository<Plan>,
+    private planRepository: Repository<Plan>,
   ) {}
 
-  // Lấy danh sách Gói dịch vụ
-  async getAll(): Promise<Plan[]> {
-    return this.userRepository.find();
+  // GET /packages - Lấy danh sách gói dịch vụ với filters
+  async findAll(query: GetPackagesDto, userId?: number) {
+    const { category, vendor, min_price, max_price, duration_unit, limit, offset, sort } = query;
+
+    const queryBuilder = this.planRepository
+      .createQueryBuilder('plan')
+      .leftJoinAndSelect('plan.vendor', 'vendor')
+      .leftJoinAndSelect('plan.category', 'category')
+      .where('plan.status = :status', { status: 'approved' })
+      .andWhere('plan.is_active = :active', { active: true });
+
+    // Apply filters
+    if (category) {
+      queryBuilder.andWhere('plan.category_id = :category', { category });
+    }
+
+    if (vendor) {
+      queryBuilder.andWhere('plan.vendor_id = :vendor', { vendor });
+    }
+
+    if (min_price !== undefined) {
+      queryBuilder.andWhere('plan.price >= :min_price', { min_price });
+    }
+
+    if (max_price !== undefined) {
+      queryBuilder.andWhere('plan.price <= :max_price', { max_price });
+    }
+
+    if (duration_unit) {
+      queryBuilder.andWhere('plan.duration_unit = :duration_unit', { duration_unit });
+    }
+
+    // Apply sorting
+    switch (sort) {
+      case 'price_asc':
+        queryBuilder.orderBy('plan.price', 'ASC');
+        break;
+      case 'price_desc':
+        queryBuilder.orderBy('plan.price', 'DESC');
+        break;
+      case 'popular':
+        queryBuilder.orderBy('plan.subscriber_count', 'DESC');
+        break;
+      case 'newest':
+      default:
+        queryBuilder.orderBy('plan.createdAt', 'DESC');
+        break;
+    }
+
+    // Pagination
+    queryBuilder.skip(offset).take(limit);
+
+    const [packages, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      packages,
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total,
+    };
   }
-  // Xem chi tiết Gói dịch vụ theo id
-  async getById(id: number): Promise<Plan[]> {
-    return this.userRepository.findBy({ id });
+
+  // GET /packages/featured - Lấy gói nổi bật
+  async findFeatured(limit: number = 10) {
+    const packages = await this.planRepository.find({
+      where: {
+        status: 'approved',
+        is_active: true,
+      },
+      relations: ['vendor', 'category'],
+      order: {
+        subscriber_count: 'DESC',
+        average_rating: 'DESC',
+      },
+      take: limit,
+    });
+
+    return packages;
   }
-  // Tạo Gói mới
-  async createNew(createDto: CreatePlanDto): Promise<Plan> {
-    return this.userRepository.create(createDto);
+
+  // GET /packages/:id - Chi tiết gói
+  async findOne(id: number, userId?: number) {
+    const plan = await this.planRepository.findOne({
+      where: { id },
+      relations: ['vendor', 'category'],
+    });
+
+    if (!plan) {
+      throw new NotFoundException('Package not found');
+    }
+
+    // TODO: Check if user has favorited this package
+    const is_favorited = false; // Will implement with favorites module
+
+    return {
+      ...plan,
+      is_favorited,
+    };
   }
-  // Xem list Gói của user
-  async getByUser(userId: number): Promise<Plan[]> {
-    return this.userRepository.findBy({ vendor_id: userId });
+
+  // GET /packages/search - Tìm kiếm
+  async search(searchQuery: string, limit: number = 20) {
+    const packages = await this.planRepository.find({
+      where: [
+        { name: Like(`%${searchQuery}%`), status: 'approved', is_active: true },
+        { description: Like(`%${searchQuery}%`), status: 'approved', is_active: true },
+      ],
+      relations: ['vendor', 'category'],
+      take: limit,
+    });
+
+    return packages;
+  }
+
+  // GET /packages/category/:categoryId
+  async findByCategory(categoryId: number) {
+    const packages = await this.planRepository.find({
+      where: {
+        category_id: categoryId,
+        status: 'approved',
+        is_active: true,
+      },
+      relations: ['vendor', 'category'],
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    return packages;
+  }
+
+  // For vendor: create plan
+  async create(createDto: CreatePlanDto, vendorId: number) {
+    const plan = this.planRepository.create({
+      ...createDto,
+      vendor_id: vendorId,
+      status: 'pending', // Chờ admin duyệt
+    });
+
+    await this.planRepository.save(plan);
+
+    return {
+      success: true,
+      message: 'Gói đã được tạo, đang chờ admin duyệt',
+      plan,
+    };
+  }
+
+  // For vendor: update plan
+  async update(id: number, updateDto: UpdatePlanDto, vendorId: number) {
+    const plan = await this.planRepository.findOne({
+      where: { id, vendor_id: vendorId },
+    });
+
+    if (!plan) {
+      throw new NotFoundException('Package not found or you do not have permission');
+    }
+
+    Object.assign(plan, updateDto);
+    await this.planRepository.save(plan);
+
+    return plan;
+  }
+
+  // For vendor: delete plan
+  async remove(id: number, vendorId: number) {
+    const plan = await this.planRepository.findOne({
+      where: { id, vendor_id: vendorId },
+      relations: ['subscriptions'],
+    });
+
+    if (!plan) {
+      throw new NotFoundException('Package not found or you do not have permission');
+    }
+
+    // Check if anyone has subscribed
+    if (plan.subscriptions && plan.subscriptions.length > 0) {
+      return {
+        success: false,
+        message: 'Không thể xóa gói đã có người đăng ký',
+      };
+    }
+
+    await this.planRepository.remove(plan);
+
+    return {
+      success: true,
+      message: 'Đã xóa gói thành công',
+    };
+  }
+
+  // For vendor: get their plans
+  async findByVendor(vendorId: number) {
+    return this.planRepository.find({
+      where: { vendor_id: vendorId },
+      relations: ['category'],
+      order: { createdAt: 'DESC' },
+    });
   }
 }

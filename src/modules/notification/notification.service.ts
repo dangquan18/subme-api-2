@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from 'src/entities/notifications.entity';
@@ -7,204 +7,75 @@ import { Notification } from 'src/entities/notifications.entity';
 export class NotificationService {
   constructor(
     @InjectRepository(Notification)
-    private notificationRepo: Repository<Notification>,
+    private notificationsRepository: Repository<Notification>,
   ) {}
 
-  /**
-   * Lấy tất cả thông báo của user
-   */
-  async getNotificationsByUser(userId: number): Promise<any> {
-    try {
-      const notifications = await this.notificationRepo.find({
-        where: { user_id: userId },
-        order: { createdAt: 'DESC' },
-      });
+  async findAll(userId: number, page: number = 1, limit: number = 20, isRead?: boolean) {
+    const query = this.notificationsRepository
+      .createQueryBuilder('notification')
+      .where('notification.user_id = :userId', { userId })
+      .orderBy('notification.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
 
-      return {
-        success: true,
-        message: 'Lấy danh sách thông báo thành công',
-        data: notifications,
-        total: notifications.length,
-        unread_count: notifications.filter((n) => !n.is_read).length,
-      };
-    } catch (error) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi lấy danh sách thông báo',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (isRead !== undefined) {
+      query.andWhere('notification.is_read = :isRead', { isRead });
     }
+
+    const [notifications, total] = await query.getManyAndCount();
+
+    return {
+      data: notifications,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
-  /**
-   * Lấy thông báo chưa đọc của user
-   */
-  async getUnreadNotifications(userId: number): Promise<any> {
-    try {
-      const notifications = await this.notificationRepo.find({
-        where: { user_id: userId, is_read: false },
-        order: { createdAt: 'DESC' },
-      });
-
-      return {
-        success: true,
-        message: 'Lấy danh sách thông báo chưa đọc thành công',
-        data: notifications,
-        total: notifications.length,
-      };
-    } catch (error) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi lấy danh sách thông báo',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  async getUnreadCount(userId: number): Promise<number> {
+    return this.notificationsRepository.count({
+      where: { user_id: userId, is_read: false },
+    });
   }
 
-  /**
-   * Đánh dấu thông báo đã đọc
-   */
-  async markAsRead(notificationId: number, userId: number): Promise<any> {
-    try {
-      const notification = await this.notificationRepo.findOne({
-        where: { id: notificationId, user_id: userId },
-      });
+  async markAsRead(id: number, userId: number) {
+    const notification = await this.notificationsRepository.findOne({
+      where: { id, user_id: userId },
+    });
 
-      if (!notification) {
-        throw new HttpException(
-          {
-            success: false,
-            message: 'Không tìm thấy thông báo',
-            error: 'NOTIFICATION_NOT_FOUND',
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      notification.is_read = true;
-      await this.notificationRepo.save(notification);
-
-      return {
-        success: true,
-        message: 'Đánh dấu đã đọc thành công',
-        data: notification,
-      };
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi đánh dấu thông báo',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (!notification) {
+      throw new Error('Notification not found');
     }
+
+    notification.is_read = true;
+    return this.notificationsRepository.save(notification);
   }
 
-  /**
-   * Đánh dấu tất cả thông báo đã đọc
-   */
-  async markAllAsRead(userId: number): Promise<any> {
-    try {
-      await this.notificationRepo.update(
-        { user_id: userId, is_read: false },
-        { is_read: true },
-      );
+  async markAllAsRead(userId: number) {
+    await this.notificationsRepository
+      .createQueryBuilder()
+      .update(Notification)
+      .set({ is_read: true })
+      .where('user_id = :userId', { userId })
+      .andWhere('is_read = :isRead', { isRead: false })
+      .execute();
 
-      return {
-        success: true,
-        message: 'Đã đánh dấu tất cả thông báo là đã đọc',
-      };
-    } catch (error) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi đánh dấu thông báo',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return { message: 'All notifications marked as read' };
   }
 
-  /**
-   * Xóa thông báo
-   */
-  async deleteNotification(
-    notificationId: number,
-    userId: number,
-  ): Promise<any> {
-    try {
-      const notification = await this.notificationRepo.findOne({
-        where: { id: notificationId, user_id: userId },
-      });
+  async remove(id: number, userId: number) {
+    const notification = await this.notificationsRepository.findOne({
+      where: { id, user_id: userId },
+    });
 
-      if (!notification) {
-        throw new HttpException(
-          {
-            success: false,
-            message: 'Không tìm thấy thông báo',
-            error: 'NOTIFICATION_NOT_FOUND',
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      await this.notificationRepo.remove(notification);
-
-      return {
-        success: true,
-        message: 'Xóa thông báo thành công',
-      };
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi xóa thông báo',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (!notification) {
+      throw new Error('Notification not found');
     }
-  }
 
-  /**
-   * Xóa tất cả thông báo đã đọc
-   */
-  async deleteReadNotifications(userId: number): Promise<any> {
-    try {
-      await this.notificationRepo.delete({
-        user_id: userId,
-        is_read: true,
-      });
-
-      return {
-        success: true,
-        message: 'Xóa tất cả thông báo đã đọc thành công',
-      };
-    } catch (error) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi xóa thông báo',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    await this.notificationsRepository.remove(notification);
+    return { message: 'Notification deleted successfully' };
   }
 }

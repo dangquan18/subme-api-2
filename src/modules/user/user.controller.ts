@@ -1,30 +1,52 @@
 import {
   Controller,
   Get,
-  Put,
+  Patch,
+  Post,
+  Delete,
   Body,
   Param,
   ParseIntPipe,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('user')
+@Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  // Lấy profile của user
-  @Get('profile/:userId')
-  getProfile(@Param('userId', ParseIntPipe) userId: number) {
-    return this.userService.getProfile(userId);
+  // GET /users/profile - Lấy profile của user hiện tại
+  @Get('profile')
+  getProfile(@Request() req) {
+    return this.userService.getProfile(req.user.userId);
   }
 
-  // Cập nhật profile
-  @Put('profile/:userId')
-  updateProfile(
-    @Param('userId', ParseIntPipe) userId: number,
-    @Body() updateProfileDto: UpdateProfileDto,
-  ) {
-    return this.userService.updateProfile(userId, updateProfileDto);
+  // PATCH /users/profile - Cập nhật profile
+  @Patch('profile')
+  updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.userService.updateProfile(req.user.userId, updateProfileDto);
+  }
+
+  // GET /users/favorites - Danh sách yêu thích
+  @Get('favorites')
+  getFavorites(@Request() req) {
+    return this.userService.getFavorites(req.user.userId);
+  }
+
+  // POST /users/favorites/:planId - Thêm vào yêu thích
+  @Post('favorites/:planId')
+  addFavorite(@Request() req, @Param('planId', ParseIntPipe) planId: number) {
+    return this.userService.addFavorite(req.user.userId, planId);
+  }
+
+  // DELETE /users/favorites/:planId - Xóa khỏi yêu thích
+  @Delete('favorites/:planId')
+  removeFavorite(@Request() req, @Param('planId', ParseIntPipe) planId: number) {
+    return this.userService.removeFavorite(req.user.userId, planId);
   }
 }
+

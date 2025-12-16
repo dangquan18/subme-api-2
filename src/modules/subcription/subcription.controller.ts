@@ -1,64 +1,99 @@
 import {
   Controller,
   Post,
-  Body,
   Get,
+  Patch,
+  Delete,
+  Body,
   Param,
+  Query,
   ParseIntPipe,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { SubscriptionService } from './subcription.service';
-import { CreateSubcriptionDto } from './dto/create-subcription.dto';
+import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('subscription')
+@Controller('subscriptions')
+@UseGuards(JwtAuthGuard)
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
 
-  // API gộp: Tạo subscription + payment luôn
-  @Post('purchase')
-  async purchasePlan(
-    @Body() body: { user_id: number; plan_id: number; payment_method: string },
-  ) {
-    return this.subscriptionService.purchasePlan(
-      body.user_id,
-      body.plan_id,
-      body.payment_method,
-    );
-  }
-
-  // Tạo subscription riêng (nếu cần tách biệt)
-  @Post()
-  async create(@Body() createSubcriptionDto: CreateSubcriptionDto) {
-    return this.subscriptionService.createNew(createSubcriptionDto);
-  }
-
-  // Lấy tất cả subscription
+  /**
+   * GET /subscriptions - Danh sách đăng ký
+   */
   @Get()
-  async findAll() {
-    try {
-      return this.subscriptionService.findAll();
-    } catch (err) {
-      console.log(err.message);
-      throw err;
-    }
-  }
-
-  // Lấy danh sách gói đã mua của user
-  @Get('user/:userId')
-  async getSubscriptionsByUser(@Param('userId', ParseIntPipe) userId: number) {
-    return this.subscriptionService.getSubscriptionsByUser(userId);
-  }
-
-  // Lấy danh sách gói đang active của user
-  @Get('user/:userId/active')
-  async getActiveSubscriptionsByUser(
-    @Param('userId', ParseIntPipe) userId: number,
+  async findAll(
+    @Request() req,
+    @Query('status') status?: string,
   ) {
-    return this.subscriptionService.getActiveSubscriptionsByUser(userId);
+    return this.subscriptionService.findAll(req.user.userId, status);
   }
 
-  // Lấy chi tiết 1 subscription
+  /**
+   * GET /subscriptions/:id - Chi tiết đăng ký
+   */
   @Get(':id')
-  async getSubscriptionDetail(@Param('id', ParseIntPipe) id: number) {
-    return this.subscriptionService.getSubscriptionDetail(id);
+  async findOne(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.findOne(id, req.user.userId);
+  }
+
+  /**
+   * POST /subscriptions - Tạo đăng ký mới
+   */
+  @Post()
+  async create(@Request() req, @Body() dto: CreateSubscriptionDto) {
+    return this.subscriptionService.create(req.user.userId, dto);
+  }
+
+  /**
+   * PATCH /subscriptions/:id - Cập nhật đăng ký
+   */
+  @Patch(':id')
+  async update(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateSubscriptionDto,
+  ) {
+    return this.subscriptionService.update(id, req.user.userId, dto);
+  }
+
+  /**
+   * POST /subscriptions/:id/pause - Tạm dừng
+   */
+  @Post(':id/pause')
+  async pause(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.pause(id, req.user.userId);
+  }
+
+  /**
+   * POST /subscriptions/:id/resume - Tiếp tục
+   */
+  @Post(':id/resume')
+  async resume(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.resume(id, req.user.userId);
+  }
+
+  /**
+   * POST /subscriptions/:id/renew - Gia hạn
+   */
+  @Post(':id/renew')
+  async renew(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body('payment_method_id') paymentMethodId?: number,
+  ) {
+    return this.subscriptionService.renew(id, req.user.userId, paymentMethodId);
+  }
+
+  /**
+   * DELETE /subscriptions/:id - Hủy đăng ký
+   */
+  @Delete(':id')
+  async cancel(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.cancel(id, req.user.userId);
   }
 }
+

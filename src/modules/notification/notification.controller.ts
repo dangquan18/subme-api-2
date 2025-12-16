@@ -1,57 +1,66 @@
 import {
   Controller,
   Get,
-  Put,
+  Patch,
   Delete,
   Param,
+  Query,
   ParseIntPipe,
-  Body,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('notification')
+@Controller('notifications')
+@UseGuards(JwtAuthGuard)
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  // Lấy tất cả thông báo của user
-  @Get('user/:userId')
-  getNotificationsByUser(@Param('userId', ParseIntPipe) userId: number) {
-    return this.notificationService.getNotificationsByUser(userId);
-  }
-
-  // Lấy thông báo chưa đọc
-  @Get('user/:userId/unread')
-  getUnreadNotifications(@Param('userId', ParseIntPipe) userId: number) {
-    return this.notificationService.getUnreadNotifications(userId);
-  }
-
-  // Đánh dấu 1 thông báo đã đọc
-  @Put(':id/read')
-  markAsRead(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('user_id') userId: number,
+  /**
+   * GET /notifications - Danh sách thông báo
+   */
+  @Get()
+  findAll(
+    @Request() req,
+    @Query('is_read') isRead?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
-    return this.notificationService.markAsRead(id, userId);
+    const isReadBool = isRead === 'true' ? true : isRead === 'false' ? false : undefined;
+    return this.notificationService.findAll(req.user.userId, page, limit, isReadBool);
   }
 
-  // Đánh dấu tất cả đã đọc
-  @Put('user/:userId/read-all')
-  markAllAsRead(@Param('userId', ParseIntPipe) userId: number) {
-    return this.notificationService.markAllAsRead(userId);
+  /**
+   * GET /notifications/unread-count - Số lượng chưa đọc
+   */
+  @Get('unread-count')
+  getUnreadCount(@Request() req) {
+    return this.notificationService.getUnreadCount(req.user.userId);
   }
 
-  // Xóa 1 thông báo
+  /**
+   * PATCH /notifications/:id/read - Đánh dấu đã đọc
+   */
+  @Patch(':id/read')
+  markAsRead(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.notificationService.markAsRead(id, req.user.userId);
+  }
+
+  /**
+   * PATCH /notifications/read-all - Đánh dấu tất cả đã đọc
+   */
+  @Patch('read-all')
+  markAllAsRead(@Request() req) {
+    return this.notificationService.markAllAsRead(req.user.userId);
+  }
+
+  /**
+   * DELETE /notifications/:id - Xóa thông báo
+   */
   @Delete(':id')
-  deleteNotification(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('user_id') userId: number,
-  ) {
-    return this.notificationService.deleteNotification(id, userId);
-  }
-
-  // Xóa tất cả thông báo đã đọc
-  @Delete('user/:userId/read')
-  deleteReadNotifications(@Param('userId', ParseIntPipe) userId: number) {
-    return this.notificationService.deleteReadNotifications(userId);
+  remove(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.notificationService.remove(id, req.user.userId);
   }
 }
+

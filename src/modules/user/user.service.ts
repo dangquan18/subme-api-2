@@ -1,7 +1,9 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/users.entity';
+import { Favorite } from 'src/entities/favorites.entity';
+import { Plan } from 'src/entities/plans.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
@@ -9,123 +11,129 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(Favorite)
+    private favoriteRepo: Repository<Favorite>,
+    @InjectRepository(Plan)
+    private planRepo: Repository<Plan>,
   ) {}
 
   /**
-   * Lấy thông tin profile
+   * GET /users/profile - Lấy thông tin profile
    */
-  async getProfile(userId: number): Promise<any> {
-    try {
-      const user = await this.userRepo.findOne({
-        where: { id: userId },
-        select: [
-          'id',
-          'name',
-          'email',
-          'role',
-          'phone',
-          'address',
-          'date_of_birth',
-          'createdAt',
-          'updatedAt',
-        ],
-      });
+  async getProfile(userId: number) {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      select: [
+        'id',
+        'name',
+        'email',
+        'role',
+        'phone',
+        'address',
+        'date_of_birth',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
 
-      if (!user) {
-        throw new HttpException(
-          {
-            success: false,
-            message: 'Không tìm thấy user',
-            error: 'USER_NOT_FOUND',
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      return {
-        success: true,
-        message: 'Lấy thông tin profile thành công',
-        data: user,
-      };
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi lấy thông tin profile',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy user');
     }
+
+    return user;
   }
 
   /**
-   * Cập nhật profile
+   * PATCH /users/profile - Cập nhật profile
    */
-  async updateProfile(
-    userId: number,
-    updateData: UpdateProfileDto,
-  ): Promise<any> {
-    try {
-      const user = await this.userRepo.findOne({
-        where: { id: userId },
-      });
+  async updateProfile(userId: number, updateDto: UpdateProfileDto) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
 
-      if (!user) {
-        throw new HttpException(
-          {
-            success: false,
-            message: 'Không tìm thấy user',
-            error: 'USER_NOT_FOUND',
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      // Cập nhật thông tin
-      if (updateData.name !== undefined) {
-        user.name = updateData.name;
-      }
-
-      if (updateData.phone !== undefined) {
-        user.phone = updateData.phone;
-      }
-
-      if (updateData.address !== undefined) {
-        user.address = updateData.address;
-      }
-
-      if (updateData.date_of_birth !== undefined) {
-        user.date_of_birth = new Date(updateData.date_of_birth);
-      }
-
-      await this.userRepo.save(user);
-
-      // Trả về thông tin mới (không có password)
-      const { password, ...userWithoutPassword } = user;
-
-      return {
-        success: true,
-        message: 'Cập nhật profile thành công',
-        data: userWithoutPassword,
-      };
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Có lỗi xảy ra khi cập nhật profile',
-          error: 'INTERNAL_SERVER_ERROR',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy user');
     }
+
+    Object.assign(user, updateDto);
+    await this.userRepo.save(user);
+
+    const { password, ...result } = user;
+    return result;
+  }
+
+  /**
+   * GET /users/favorites - Danh sách gói yêu thích
+   */
+  async getFavorites(userId: number) {
+    const favorites = await this.favoriteRepo.find({
+      where: { user_id: userId },
+      relations: ['plan', 'plan.vendor', 'plan.category'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return favorites.map((fav) => fav.plan);
+  }
+
+  /**
+   * POST /users/favorites/:planId - Thêm vào yêu thích
+   */
+  async addFavorite(userId: number, planId: number) {
+    // Check if plan exists
+    const plan = await this.planRepo.findOne({ where: { id: planId } });
+    if (!plan) {
+      throw new NotFoundException('Gói dịch vụ không tồn tại');
+    }
+
+    // Check if already favorited
+    const existingFavorite = await this.favoriteRepo.findOne({
+      where: { user_id: userId, plan_id: planId },
+    });
+
+    if (existingFavorite) {
+      throw new ConflictException('Gói này đã có trong danh sách yêu thích');
+    }
+
+    const favorite = this.favoriteRepo.create({
+      user_id: userId,
+      plan_id: planId,
+    });
+
+    await this.favoriteRepo.save(favorite);
+
+    return {
+      success: true,
+      message: 'Đã thêm vào yêu thích',
+      favorite,
+    };
+  }
+
+  /**
+   * DELETE /users/favorites/:planId - Xóa khỏi yêu thích
+   */
+  async removeFavorite(userId: number, planId: number) {
+    const favorite = await this.favoriteRepo.findOne({
+      where: { user_id: userId, plan_id: planId },
+    });
+
+    if (!favorite) {
+      throw new NotFoundException('Không tìm thấy trong danh sách yêu thích');
+    }
+
+    await this.favoriteRepo.remove(favorite);
+
+    return {
+      success: true,
+      message: 'Đã xóa khỏi danh sách yêu thích',
+    };
+  }
+
+  /**
+   * Check if a plan is favorited by user
+   */
+  async isFavorited(userId: number, planId: number): Promise<boolean> {
+    const favorite = await this.favoriteRepo.findOne({
+      where: { user_id: userId, plan_id: planId },
+    });
+
+    return !!favorite;
   }
 }

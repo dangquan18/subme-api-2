@@ -36,6 +36,16 @@ export class Plan {
 
   @Column({ type: 'int' })
   duration_value: number;
+
+  @Column({ type: 'tinyint', default: 1 })
+  is_active: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  subscriber_count: number;
+
+  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0.0 })
+  average_rating: number;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   imageUrl?: string;
   @Column({

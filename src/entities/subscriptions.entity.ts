@@ -34,6 +34,15 @@ export class Subscription {
   })
   status: 'pending_payment' | 'active' | 'expired' | 'cancelled';
 
+  @Column({ type: 'tinyint', default: 1 })
+  auto_renew: boolean;
+
+  @Column({ type: 'datetime', nullable: true })
+  paused_at?: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  cancelled_at?: Date;
+
   @ManyToOne(() => User, user => user.subscriptions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
