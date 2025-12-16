@@ -38,6 +38,17 @@ export class VendorController {
   }
 
   /**
+   * GET /vendor/packages/:id - Chi tiết một gói
+   */
+  @Get('packages/:id')
+  getPackageDetail(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.vendorService.getPackageDetail(req.user.userId, id);
+  }
+
+  /**
    * POST /vendor/packages - Tạo gói mới
    */
   @Post('packages')

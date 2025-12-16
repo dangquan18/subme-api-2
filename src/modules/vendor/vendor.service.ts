@@ -104,6 +104,63 @@ export class VendorService {
   }
 
   /**
+   * GET /vendor/packages/:id - Chi tiết một gói
+   */
+  async getPackageDetail(userId: number, planId: number) {
+    const vendorId = await this.getVendorIdFromUserId(userId);
+    
+    const plan = await this.planRepo.findOne({
+      where: { id: planId, vendor_id: vendorId },
+      relations: ['category'],
+    });
+
+    if (!plan) {
+      throw new NotFoundException('Package not found');
+    }
+
+    // Get subscription statistics
+    const subscriptionStats = await this.subscriptionRepo
+      .createQueryBuilder('subscription')
+      .select('subscription.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('subscription.plan_id = :planId', { planId })
+      .groupBy('subscription.status')
+      .getRawMany();
+
+    // Get total revenue from this plan
+    const revenueResult = await this.paymentRepo
+      .createQueryBuilder('payment')
+      .select('SUM(payment.amount)', 'total')
+      .leftJoin('payment.subscription', 'subscription')
+      .where('subscription.plan_id = :planId', { planId })
+      .andWhere('payment.status = :status', { status: 'success' })
+      .getRawOne();
+
+    const totalRevenue = parseFloat(revenueResult.total) || 0;
+
+    // Get average rating
+    const ratingResult = await this.reviewRepo
+      .createQueryBuilder('review')
+      .select('AVG(review.rating)', 'average')
+      .addSelect('COUNT(review.id)', 'count')
+      .where('review.plan_id = :planId', { planId })
+      .getRawOne();
+
+    const averageRating = parseFloat(ratingResult.average) || 0;
+    const reviewCount = parseInt(ratingResult.count) || 0;
+
+    return {
+      ...plan,
+      statistics: {
+        subscriptions: subscriptionStats,
+        totalRevenue,
+        averageRating,
+        reviewCount,
+      },
+    };
+  }
+
+  /**
    * POST /vendor/packages - Tạo gói mới
    */
   async createPackage(userId: number, dto: CreatePlanDto) {
