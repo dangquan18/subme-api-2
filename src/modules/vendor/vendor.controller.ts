@@ -22,6 +22,14 @@ export class VendorController {
   constructor(private readonly vendorService: VendorService) {}
 
   /**
+   * GET /vendor/info - Lấy thông tin vendor theo userId
+   */
+  @Get('info')
+  getVendorInfo(@Request() req) {
+    return this.vendorService.getVendorInfo(req.user.userId);
+  }
+
+  /**
    * GET /vendor/stats - Thống kê dashboard
    */
   @Get('stats')

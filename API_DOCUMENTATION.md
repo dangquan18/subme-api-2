@@ -1295,7 +1295,66 @@ Authorization: Bearer {access_token}
 
 **Note:** All vendor APIs require `role: 'vendor'` in JWT token.
 
-### 1. Get Vendor Stats
+### 1. Get Vendor Info
+**GET** `/vendor/info`
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response Success (200):**
+```json
+{
+  "id": 1,
+  "user_id": 5,
+  "name": "Netflix Inc.",
+  "email": "vendor@netflix.com",
+  "phone": "0901234567",
+  "address": "123 Tech Street, District 1, HCMC",
+  "description": "Nền tảng streaming hàng đầu thế giới",
+  "status": "approved",
+  "createdAt": "2025-12-01T16:00:00.000Z",
+  "user": {
+    "id": 5,
+    "name": "Netflix Admin",
+    "email": "admin@netflix.com",
+    "role": "vendor"
+  },
+  "plans": [
+    {
+      "id": 1,
+      "name": "Netflix Premium",
+      "price": 260000,
+      "status": "approved",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "Netflix Basic",
+      "price": 70000,
+      "status": "approved",
+      "is_active": true
+    }
+  ],
+  "totalSubscribers": 1500,
+  "totalRevenue": 15000000,
+  "averageRating": 4.5,
+  "totalPlans": 2
+}
+```
+
+**Response Error (404):**
+```json
+{
+  "statusCode": 404,
+  "message": "Vendor profile not found. Please contact admin."
+}
+```
+
+---
+
+### 2. Get Vendor Stats
 **GET** `/vendor/stats`
 
 **Headers:**
@@ -1315,7 +1374,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 2. Get Vendor Packages
+### 3. Get Vendor Packages
 **GET** `/vendor/packages`
 
 **Headers:**
@@ -1344,7 +1403,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 3. Create Package
+### 4. Create Package
 **POST** `/vendor/packages`
 
 **Headers:**
@@ -1383,7 +1442,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 4. Update Package
+### 5. Update Package
 **PATCH** `/vendor/packages/:id`
 
 **Headers:**
@@ -1416,7 +1475,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 5. Delete Package
+### 6. Delete Package
 **DELETE** `/vendor/packages/:id`
 
 **Headers:**
@@ -1434,7 +1493,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 6. Get Vendor Orders
+### 7. Get Vendor Orders
 **GET** `/vendor/orders`
 
 **Headers:**
@@ -1476,7 +1535,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 7. Get Vendor Analytics
+### 8. Get Vendor Analytics
 **GET** `/vendor/analytics`
 
 **Headers:**
@@ -1510,7 +1569,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 8. Get Vendor Reviews
+### 9. Get Vendor Reviews
 **GET** `/vendor/reviews`
 
 **Headers:**

@@ -40,6 +40,61 @@ export class VendorService {
   }
 
   /**
+   * GET /vendor/info - Lấy thông tin vendor theo userId
+   */
+  async getVendorInfo(userId: number) {
+    const vendor = await this.vendorRepo.findOne({
+      where: { user_id: userId },
+      relations: ['user', 'plans'],
+    });
+
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found. Please contact admin.');
+    }
+
+    // Tính toán số lượng subscribers cho vendor
+    const totalSubscribers = await this.subscriptionRepo
+      .createQueryBuilder('subscription')
+      .leftJoin('subscription.plan', 'plan')
+      .where('plan.vendor_id = :vendorId', { vendorId: vendor.id })
+      .andWhere('subscription.status = :status', { status: 'active' })
+      .getCount();
+
+    // Tính toán tổng revenue
+    const revenueResult = await this.paymentRepo
+      .createQueryBuilder('payment')
+      .select('SUM(payment.amount)', 'total')
+      .leftJoin('payment.subscription', 'subscription')
+      .leftJoin('subscription.plan', 'plan')
+      .where('plan.vendor_id = :vendorId', { vendorId: vendor.id })
+      .andWhere('payment.status = :status', { status: 'success' })
+      .getRawOne();
+
+    const totalRevenue = parseFloat(revenueResult.total) || 0;
+
+    // Tính toán rating trung bình
+    const ratingResult = await this.reviewRepo
+      .createQueryBuilder('review')
+      .select('AVG(review.rating)', 'avg')
+      .leftJoin('review.plan', 'plan')
+      .where('plan.vendor_id = :vendorId', { vendorId: vendor.id })
+      .getRawOne();
+
+    const averageRating = parseFloat(ratingResult.avg) || 0;
+
+    // Loại bỏ password khỏi response
+    const { password, ...vendorData } = vendor;
+
+    return {
+      ...vendorData,
+      totalSubscribers,
+      totalRevenue,
+      averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
+      totalPlans: vendor.plans?.length || 0,
+    };
+  }
+
+  /**
    * GET /vendor/stats - Thống kê dashboard
    */
   async getStats(userId: number) {
