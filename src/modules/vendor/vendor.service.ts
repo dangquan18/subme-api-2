@@ -8,6 +8,7 @@ import { Payment } from 'src/entities/payments.entity';
 import { Review } from 'src/entities/reviews.entity';
 import { CreatePlanDto } from '../plan/dto/create-plan.dto';
 import { UpdatePlanDto } from '../plan/dto/update-plan.dto';
+import { ApproveVendorDto } from './dto/approve-vendor.dto';
 
 @Injectable()
 export class VendorService {
@@ -392,6 +393,107 @@ export class VendorService {
       total,
       limit,
       offset,
+    };
+  }
+
+  /**
+   * ADMIN - GET all vendors (pending/approved/rejected)
+   */
+  async getAllVendors(status?: string, limit: number = 20, offset: number = 0) {
+    const queryBuilder = this.vendorRepo
+      .createQueryBuilder('vendor')
+      .leftJoinAndSelect('vendor.user', 'user')
+      .leftJoinAndSelect('vendor.plans', 'plans');
+
+    if (status) {
+      queryBuilder.where('vendor.status = :status', { status });
+    }
+
+    queryBuilder
+      .orderBy('vendor.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    const [vendors, total] = await queryBuilder.getManyAndCount();
+
+    // Remove passwords
+    const vendorsWithoutPassword = vendors.map(vendor => {
+      const { password, ...vendorData } = vendor;
+      return vendorData;
+    });
+
+    return {
+      vendors: vendorsWithoutPassword,
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  /**
+   * ADMIN - Approve/Reject vendor
+   */
+  async approveVendor(vendorId: number, dto: ApproveVendorDto) {
+    const vendor = await this.vendorRepo.findOne({ where: { id: vendorId } });
+
+    if (!vendor) {
+      throw new NotFoundException(`Vendor with ID ${vendorId} not found`);
+    }
+
+    vendor.status = dto.status;
+    await this.vendorRepo.save(vendor);
+
+    return {
+      message: `Vendor ${dto.status === 'approved' ? 'approved' : dto.status === 'rejected' ? 'rejected' : 'updated'} successfully`,
+      vendor: {
+        id: vendor.id,
+        name: vendor.name,
+        email: vendor.email,
+        status: vendor.status,
+        reason: dto.reason,
+      },
+    };
+  }
+
+  /**
+   * ADMIN - Get vendor detail by ID
+   */
+  async getVendorById(vendorId: number) {
+    const vendor = await this.vendorRepo.findOne({
+      where: { id: vendorId },
+      relations: ['user', 'plans'],
+    });
+
+    if (!vendor) {
+      throw new NotFoundException(`Vendor with ID ${vendorId} not found`);
+    }
+
+    const { password, ...vendorData } = vendor;
+
+    // Calculate stats
+    const totalSubscribers = await this.subscriptionRepo
+      .createQueryBuilder('subscription')
+      .leftJoin('subscription.plan', 'plan')
+      .where('plan.vendor_id = :vendorId', { vendorId })
+      .andWhere('subscription.status = :status', { status: 'active' })
+      .getCount();
+
+    const revenueResult = await this.paymentRepo
+      .createQueryBuilder('payment')
+      .select('SUM(payment.amount)', 'total')
+      .leftJoin('payment.subscription', 'subscription')
+      .leftJoin('subscription.plan', 'plan')
+      .where('plan.vendor_id = :vendorId', { vendorId })
+      .andWhere('payment.status = :status', { status: 'success' })
+      .getRawOne();
+
+    const totalRevenue = parseFloat(revenueResult.total) || 0;
+
+    return {
+      ...vendorData,
+      totalSubscribers,
+      totalRevenue,
+      totalPlans: vendor.plans?.length || 0,
     };
   }
 }

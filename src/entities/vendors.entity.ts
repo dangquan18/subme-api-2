@@ -39,10 +39,10 @@ export class Vendor {
 
   @Column({
     type: 'enum',
-    enum: ['pending', 'approved', 'active'],
+    enum: ['pending', 'approved', 'active', 'rejected'],
     default: 'pending',
   })
-  status: 'pending' | 'approved' | 'active';
+  status: 'pending' | 'approved' | 'active' | 'rejected';
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

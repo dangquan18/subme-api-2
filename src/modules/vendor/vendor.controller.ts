@@ -14,7 +14,10 @@ import {
 import { VendorService } from './vendor.service';
 import { CreatePlanDto } from '../plan/dto/create-plan.dto';
 import { UpdatePlanDto } from '../plan/dto/update-plan.dto';
+import { ApproveVendorDto } from './dto/approve-vendor.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('vendor')
 @UseGuards(JwtAuthGuard)
@@ -124,5 +127,48 @@ export class VendorController {
     const finalLimit = limit || 20;
     const finalOffset = offset || 0;
     return this.vendorService.getReviews(req.user.userId, planId, finalLimit, finalOffset);
+  }
+
+  /**
+   * ADMIN ENDPOINTS
+   */
+
+  /**
+   * GET /vendor/admin/all - Lấy danh sách tất cả vendors (admin only)
+   */
+  @Get('admin/all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  getAllVendors(
+    @Query('status') status?: string,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
+  ) {
+    const finalLimit = limit || 20;
+    const finalOffset = offset || 0;
+    return this.vendorService.getAllVendors(status, finalLimit, finalOffset);
+  }
+
+  /**
+   * GET /vendor/admin/:id - Chi tiết vendor (admin only)
+   */
+  @Get('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  getVendorById(@Param('id', ParseIntPipe) id: number) {
+    return this.vendorService.getVendorById(id);
+  }
+
+  /**
+   * PATCH /vendor/admin/:id/approve - Duyệt/từ chối vendor (admin only)
+   */
+  @Patch('admin/:id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  approveVendor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ApproveVendorDto,
+  ) {
+    return this.vendorService.approveVendor(id, dto);
   }
 }

@@ -12,6 +12,9 @@ Base URL: `http://localhost:3000`
 7. [Notifications APIs](#notifications-apis)
 8. [Reviews APIs](#reviews-apis)
 9. [Vendor APIs](#vendor-apis)
+10. [Admin APIs](#admin-apis)
+   - [Admin - Vendor Management](#admin---vendor-management)
+   - [Admin - Plan Management](#admin---plan-management)
 
 ---
 
@@ -1646,6 +1649,315 @@ Authorization: Bearer {access_token}
 
 ---
 
+## Admin APIs
+
+### Admin - Vendor Management
+
+#### 1. Get All Vendors
+**GET** `/vendor/admin/all`
+
+**Authorization:** Required (Admin only)
+
+**Query Parameters:**
+- `status` (optional): Filter by status (pending/approved/rejected)
+- `limit` (optional, default: 20): Number of items per page
+- `offset` (optional, default: 0): Offset for pagination
+
+**Headers:**
+```
+Authorization: Bearer {admin_access_token}
+```
+
+**Response Success (200):**
+```json
+{
+  "vendors": [
+    {
+      "id": 1,
+      "user_id": 5,
+      "name": "Tech Store",
+      "email": "tech@vendor.com",
+      "phone": "0901234567",
+      "address": "123 Tech Street",
+      "description": "Technology subscription services",
+      "status": "pending",
+      "createdAt": "2025-12-15T16:00:00.000Z",
+      "user": {
+        "id": 5,
+        "name": "Tech Admin",
+        "email": "tech@vendor.com"
+      },
+      "plans": [
+        {
+          "id": 10,
+          "name": "Premium Software",
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "total": 15,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+---
+
+#### 2. Get Vendor Detail
+**GET** `/vendor/admin/:id`
+
+**Authorization:** Required (Admin only)
+
+**Headers:**
+```
+Authorization: Bearer {admin_access_token}
+```
+
+**Response Success (200):**
+```json
+{
+  "id": 1,
+  "user_id": 5,
+  "name": "Tech Store",
+  "email": "tech@vendor.com",
+  "phone": "0901234567",
+  "address": "123 Tech Street",
+  "description": "Technology subscription services",
+  "status": "pending",
+  "createdAt": "2025-12-15T16:00:00.000Z",
+  "user": {
+    "id": 5,
+    "name": "Tech Admin",
+    "email": "tech@vendor.com"
+  },
+  "plans": [
+    {
+      "id": 10,
+      "name": "Premium Software",
+      "price": 299000,
+      "status": "pending"
+    }
+  ],
+  "totalSubscribers": 150,
+  "totalRevenue": 45000000,
+  "totalPlans": 5
+}
+```
+
+**Response Error (404):**
+```json
+{
+  "statusCode": 404,
+  "message": "Vendor with ID 1 not found"
+}
+```
+
+---
+
+#### 3. Approve/Reject Vendor
+**PATCH** `/vendor/admin/:id/approve`
+
+**Authorization:** Required (Admin only)
+
+**Headers:**
+```
+Authorization: Bearer {admin_access_token}
+```
+
+**Request Body:**
+```json
+{
+  "status": "approved",
+  "reason": "Vendor meets all requirements"
+}
+```
+
+**Status values:**
+- `approved`: Vendor is approved and can start selling
+- `rejected`: Vendor is rejected
+- `pending`: Reset to pending status
+
+**Response Success (200):**
+```json
+{
+  "message": "Vendor approved successfully",
+  "vendor": {
+    "id": 1,
+    "name": "Tech Store",
+    "email": "tech@vendor.com",
+    "status": "approved",
+    "reason": "Vendor meets all requirements"
+  }
+}
+```
+
+**Response Error (403):**
+```json
+{
+  "statusCode": 403,
+  "message": "Bạn không có quyền truy cập vào tài nguyên này ( Vai trò không hợp lệ)"
+}
+```
+
+---
+
+### Admin - Plan Management
+
+#### 4. Get All Plans (Including Pending)
+**GET** `/packages/admin/all`
+
+**Authorization:** Required (Admin only)
+
+**Query Parameters:**
+- `status` (optional): Filter by status (pending/approved/rejected)
+- `limit` (optional, default: 20): Number of items per page
+- `offset` (optional, default: 0): Offset for pagination
+
+**Headers:**
+```
+Authorization: Bearer {admin_access_token}
+```
+
+**Response Success (200):**
+```json
+{
+  "plans": [
+    {
+      "id": 10,
+      "vendor_id": 1,
+      "category_id": 3,
+      "name": "Premium Software",
+      "description": "Full access to all features",
+      "price": 299000,
+      "duration_unit": "tháng",
+      "duration_value": 1,
+      "is_active": true,
+      "subscriber_count": 0,
+      "average_rating": 0,
+      "imageUrl": "https://example.com/image.jpg",
+      "status": "pending",
+      "createdAt": "2025-12-18T10:00:00.000Z",
+      "vendor": {
+        "id": 1,
+        "name": "Tech Store",
+        "email": "tech@vendor.com",
+        "status": "approved"
+      },
+      "category": {
+        "id": 3,
+        "name": "Software"
+      }
+    }
+  ],
+  "total": 25,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+---
+
+#### 5. Get Plan Detail (Admin)
+**GET** `/packages/admin/:id`
+
+**Authorization:** Required (Admin only)
+
+**Headers:**
+```
+Authorization: Bearer {admin_access_token}
+```
+
+**Response Success (200):**
+```json
+{
+  "id": 10,
+  "vendor_id": 1,
+  "category_id": 3,
+  "name": "Premium Software",
+  "description": "Full access to all features",
+  "price": 299000,
+  "duration_unit": "tháng",
+  "duration_value": 1,
+  "is_active": true,
+  "subscriber_count": 0,
+  "average_rating": 0,
+  "imageUrl": "https://example.com/image.jpg",
+  "status": "pending",
+  "createdAt": "2025-12-18T10:00:00.000Z",
+  "vendor": {
+    "id": 1,
+    "name": "Tech Store",
+    "email": "tech@vendor.com",
+    "phone": "0901234567",
+    "status": "approved"
+  },
+  "category": {
+    "id": 3,
+    "name": "Software",
+    "description": "Software subscriptions"
+  },
+  "subscriptions": []
+}
+```
+
+**Response Error (404):**
+```json
+{
+  "statusCode": 404,
+  "message": "Plan with ID 10 not found"
+}
+```
+
+---
+
+#### 6. Approve/Reject Plan
+**PATCH** `/packages/admin/:id/approve`
+
+**Authorization:** Required (Admin only)
+
+**Headers:**
+```
+Authorization: Bearer {admin_access_token}
+```
+
+**Request Body:**
+```json
+{
+  "status": "approved",
+  "reason": "Plan meets quality standards"
+}
+```
+
+**Status values:**
+- `approved`: Plan is approved and visible to customers
+- `rejected`: Plan is rejected (and set to inactive)
+- `pending`: Reset to pending status
+
+**Response Success (200):**
+```json
+{
+  "message": "Plan approved successfully",
+  "plan": {
+    "id": 10,
+    "name": "Premium Software",
+    "vendor": "Tech Store",
+    "status": "approved",
+    "reason": "Plan meets quality standards"
+  }
+}
+```
+
+**Response Error (403):**
+```json
+{
+  "statusCode": 403,
+  "message": "Bạn không có quyền truy cập vào tài nguyên này ( Vai trò không hợp lệ)"
+}
+```
+
+---
+
 ## VNPay Payment Flow
 
 1. **User creates subscription:**
@@ -1722,6 +2034,14 @@ Authorization: Bearer {access_token}
    - Vendor APIs require `role: 'vendor'` in JWT
    - Regular users cannot access vendor endpoints
    - Check user role before displaying vendor UI
+
+8. **Admin Role:**
+   - Admin APIs require `role: 'admin'` in JWT
+   - Only admins can approve/reject vendors and plans
+   - Admin can view all vendors/plans including pending ones
+   - Vendor status flow: `pending` → `approved` or `rejected`
+   - Plan status flow: `pending` → `approved` or `rejected`
+   - Rejected plans are automatically set to `is_active: false`
 
 ---
 

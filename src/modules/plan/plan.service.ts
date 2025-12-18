@@ -5,6 +5,7 @@ import { Repository, Like, Between, MoreThanOrEqual, LessThanOrEqual } from 'typ
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { GetPackagesDto } from './dto/get-packages.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { ApprovePlanDto } from './dto/approve-plan.dto';
 
 @Injectable()
 export class PlanService {
@@ -212,5 +213,83 @@ export class PlanService {
       relations: ['category'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  /**
+   * ADMIN - Get all plans (including pending)
+   */
+  async getAllPlansForAdmin(status?: string, limit: number = 20, offset: number = 0) {
+    const queryBuilder = this.planRepository
+      .createQueryBuilder('plan')
+      .leftJoinAndSelect('plan.vendor', 'vendor')
+      .leftJoinAndSelect('plan.category', 'category');
+
+    if (status) {
+      queryBuilder.where('plan.status = :status', { status });
+    }
+
+    queryBuilder
+      .orderBy('plan.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    const [plans, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      plans,
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  /**
+   * ADMIN - Approve/Reject plan
+   */
+  async approvePlan(planId: number, dto: ApprovePlanDto) {
+    const plan = await this.planRepository.findOne({ 
+      where: { id: planId },
+      relations: ['vendor', 'category']
+    });
+
+    if (!plan) {
+      throw new NotFoundException(`Plan with ID ${planId} not found`);
+    }
+
+    plan.status = dto.status;
+    
+    // If rejected, set is_active to false
+    if (dto.status === 'rejected') {
+      plan.is_active = false;
+    }
+
+    await this.planRepository.save(plan);
+
+    return {
+      message: `Plan ${dto.status === 'approved' ? 'approved' : dto.status === 'rejected' ? 'rejected' : 'updated'} successfully`,
+      plan: {
+        id: plan.id,
+        name: plan.name,
+        vendor: plan.vendor.name,
+        status: plan.status,
+        reason: dto.reason,
+      },
+    };
+  }
+
+  /**
+   * ADMIN - Get plan detail by ID (including pending)
+   */
+  async getPlanByIdForAdmin(planId: number) {
+    const plan = await this.planRepository.findOne({
+      where: { id: planId },
+      relations: ['vendor', 'category', 'subscriptions'],
+    });
+
+    if (!plan) {
+      throw new NotFoundException(`Plan with ID ${planId} not found`);
+    }
+
+    return plan;
   }
 }

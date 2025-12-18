@@ -62,4 +62,11 @@ CREATE TABLE IF NOT EXISTS reviews (
   UNIQUE KEY unique_user_plan_review (user_id, plan_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 6. Update vendor status enum to support admin approval workflow
+-- Add 'rejected' status while keeping 'active' and 'approved'
+ALTER TABLE vendors 
+MODIFY COLUMN status ENUM('pending', 'approved', 'active', 'rejected') 
+COLLATE utf8mb4_unicode_ci 
+DEFAULT 'pending';
+
 SELECT 'All migrations completed successfully!' as status;
