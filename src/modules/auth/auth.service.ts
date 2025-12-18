@@ -109,7 +109,7 @@ export class AuthService {
     try {
       await this.mailService.sendRegisterSuccess(
         savedUser.email,
-        savedUser.name,
+        '<h1>Chào mừng bạn đến với Subme!</h1><p>Bạn đã đăng ký tài khoản thành công.</p>',
         // savedUser.role,
       );
     } catch (error) {

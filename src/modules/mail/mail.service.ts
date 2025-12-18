@@ -5,14 +5,12 @@ import { MailerService } from '@nestjs-modules/mailer';
 export class MailService {
   constructor(private readonly mailerService: MailerService) {}
 
-  async sendRegisterSuccess(email: string, name: string) {
+  async sendRegisterSuccess(email: string, content: string) {
     await this.mailerService.sendMail({
       to: email,
       subject: 'Đăng ký thành công 🎉',
       html: `
-        <h2>Xin chào ${name}</h2>
-        <p>Bạn đã đăng ký tài khoản thành công.</p>
-        <p>Cảm ơn bạn đã sử dụng dịch vụ SUBME!</p>
+        ${content}
       `,
     });
   }
