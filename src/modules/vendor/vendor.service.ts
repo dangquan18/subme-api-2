@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Vendor } from 'src/entities/vendors.entity';
@@ -9,6 +13,7 @@ import { Review } from 'src/entities/reviews.entity';
 import { CreatePlanDto } from '../plan/dto/create-plan.dto';
 import { UpdatePlanDto } from '../plan/dto/update-plan.dto';
 import { ApproveVendorDto } from './dto/approve-vendor.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class VendorService {
@@ -23,6 +28,7 @@ export class VendorService {
     private paymentRepo: Repository<Payment>,
     @InjectRepository(Review)
     private reviewRepo: Repository<Review>,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -34,7 +40,9 @@ export class VendorService {
     });
 
     if (!vendor) {
-      throw new NotFoundException('Vendor profile not found. Please contact admin.');
+      throw new NotFoundException(
+        'Vendor profile not found. Please contact admin.',
+      );
     }
 
     return vendor.id;
@@ -50,7 +58,9 @@ export class VendorService {
     });
 
     if (!vendor) {
-      throw new NotFoundException('Vendor profile not found. Please contact admin.');
+      throw new NotFoundException(
+        'Vendor profile not found. Please contact admin.',
+      );
     }
 
     // Tính toán số lượng subscribers cho vendor
@@ -100,7 +110,7 @@ export class VendorService {
    */
   async getStats(userId: number) {
     const vendorId = await this.getVendorIdFromUserId(userId);
-    
+
     // Total revenue
     const revenueResult = await this.paymentRepo
       .createQueryBuilder('payment')
@@ -164,7 +174,7 @@ export class VendorService {
    */
   async getPackageDetail(userId: number, planId: number) {
     const vendorId = await this.getVendorIdFromUserId(userId);
-    
+
     const plan = await this.planRepo.findOne({
       where: { id: planId, vendor_id: vendorId },
       relations: ['category'],
@@ -242,7 +252,7 @@ export class VendorService {
    */
   async updatePackage(id: number, userId: number, dto: UpdatePlanDto) {
     const vendorId = await this.getVendorIdFromUserId(userId);
-    
+
     const plan = await this.planRepo.findOne({
       where: { id, vendor_id: vendorId },
     });
@@ -266,7 +276,7 @@ export class VendorService {
    */
   async deletePackage(id: number, userId: number) {
     const vendorId = await this.getVendorIdFromUserId(userId);
-    
+
     const plan = await this.planRepo.findOne({
       where: { id, vendor_id: vendorId },
     });
@@ -302,7 +312,7 @@ export class VendorService {
     offset: number = 0,
   ) {
     const vendorId = await this.getVendorIdFromUserId(userId);
-    
+
     const queryBuilder = this.subscriptionRepo
       .createQueryBuilder('subscription')
       .leftJoinAndSelect('subscription.user', 'user')
@@ -334,7 +344,7 @@ export class VendorService {
    */
   async getAnalytics(userId: number, startDate: string, endDate: string) {
     const vendorId = await this.getVendorIdFromUserId(userId);
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -370,7 +380,7 @@ export class VendorService {
     offset: number = 0,
   ) {
     const vendorId = await this.getVendorIdFromUserId(userId);
-    
+
     const queryBuilder = this.reviewRepo
       .createQueryBuilder('review')
       .leftJoinAndSelect('review.user', 'user')
@@ -381,10 +391,7 @@ export class VendorService {
       queryBuilder.andWhere('review.plan_id = :planId', { planId });
     }
 
-    queryBuilder
-      .orderBy('review.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit);
+    queryBuilder.orderBy('review.createdAt', 'DESC').skip(offset).take(limit);
 
     const [reviews, total] = await queryBuilder.getManyAndCount();
 
@@ -409,15 +416,12 @@ export class VendorService {
       queryBuilder.where('vendor.status = :status', { status });
     }
 
-    queryBuilder
-      .orderBy('vendor.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit);
+    queryBuilder.orderBy('vendor.createdAt', 'DESC').skip(offset).take(limit);
 
     const [vendors, total] = await queryBuilder.getManyAndCount();
 
     // Remove passwords
-    const vendorsWithoutPassword = vendors.map(vendor => {
+    const vendorsWithoutPassword = vendors.map((vendor) => {
       const { password, ...vendorData } = vendor;
       return vendorData;
     });
@@ -434,21 +438,74 @@ export class VendorService {
    * ADMIN - Approve/Reject vendor
    */
   async approveVendor(vendorId: number, dto: ApproveVendorDto) {
-    const vendor = await this.vendorRepo.findOne({ where: { id: vendorId } });
+    const vendor = await this.vendorRepo.findOne({
+      where: { id: vendorId },
+      relations: ['user'], // 👈 nếu vendor có liên kết user
+    });
 
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${vendorId} not found`);
     }
 
+    // Cập nhật trạng thái
     vendor.status = dto.status;
     await this.vendorRepo.save(vendor);
 
+    // ===================== GỬI MAIL (CÁCH 1) =====================
+    // Ưu tiên email user → fallback sang email vendor
+    const email = vendor.user?.email || vendor.email || null;
+
+    if (email) {
+      let subject = '';
+      let content = '';
+
+      if (dto.status === 'approved') {
+        subject = 'Tài khoản Vendor đã được duyệt ✅';
+        content = `
+        <p>Xin chào <b>${vendor.name}</b>,</p>
+        <p>Tài khoản vendor của bạn đã được <b>phê duyệt</b>.</p>
+        <p>Bạn có thể bắt đầu đăng bán sản phẩm ngay 🎉</p>
+      `;
+      }
+
+      if (dto.status === 'rejected') {
+        subject = 'Tài khoản Vendor bị từ chối ❌';
+        content = `
+        <p>Xin chào <b>${vendor.name}</b>,</p>
+        <p>Tài khoản vendor của bạn đã bị <b>từ chối</b>.</p>
+        <p><b>Lý do:</b> ${dto.reason || 'Không có lý do cụ thể'}</p>
+        <p>Vui lòng cập nhật lại thông tin và gửi lại để được xét duyệt.</p>
+      `;
+      }
+
+      if (subject && content) {
+        await this.mailService.sendRegisterSuccess(
+          email,
+          `
+          <h3>${subject}</h3>
+          ${content}
+        `,
+        );
+      }
+    } else {
+      console.warn(
+        `[MAIL] Skip sending vendor approve mail - Vendor ${vendor.id} has no email`,
+      );
+    }
+    // =============================================================
+
     return {
-      message: `Vendor ${dto.status === 'approved' ? 'approved' : dto.status === 'rejected' ? 'rejected' : 'updated'} successfully`,
+      message: `Vendor ${
+        dto.status === 'approved'
+          ? 'approved'
+          : dto.status === 'rejected'
+            ? 'rejected'
+            : 'updated'
+      } successfully`,
       vendor: {
         id: vendor.id,
         name: vendor.name,
-        email: vendor.email,
+        email: email, // trả email đã dùng (nếu có)
         status: vendor.status,
         reason: dto.reason,
       },
