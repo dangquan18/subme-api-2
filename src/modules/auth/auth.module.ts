@@ -7,6 +7,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/entities/users.entity';
 import { Vendor } from 'src/entities/vendors.entity';
 import { JwtStrategy } from './jwt.strategy';
+import { MailService } from '../mail/mail.service';
+import { MailModule } from '../mail/mail.module';
+// import { MailService } from '../mail/mail.service';
+// import { MailModule } from '../mail/mail.module';
 // import { JwtStrategy } from './jwt.strategy';
 // import { AccountModule } from 'src/account/account.module';
 // import { JwtStrategy } from './jwt.strategy';
@@ -18,8 +22,9 @@ import { JwtStrategy } from './jwt.strategy';
       secret: 'SECRET_KEY',
       signOptions: { expiresIn: '1h' },
     }),
+    MailModule,
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, MailService],
   controllers: [AuthController],
   exports: [AuthService],
 })

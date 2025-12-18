@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/users.entity';
@@ -8,6 +13,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import * as bcrypt from 'bcrypt';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +23,8 @@ export class AuthService {
     private userRepository: Repository<User>,
     @InjectRepository(Vendor)
     private vendorRepository: Repository<Vendor>,
+    // private readonly userRepository: UserRepository,
+    private readonly mailService: MailService,
   ) {}
 
   async findByEmail(email: string): Promise<User> {
@@ -47,7 +55,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     const payload = { email: user.email, sub: user.id, role: user.role };
-    
+
     return {
       success: true,
       access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
@@ -97,6 +105,17 @@ export class AuthService {
       await this.vendorRepository.save(vendor);
     }
 
+    // 📧 GỬI MAIL TRỰC TIẾP
+    try {
+      await this.mailService.sendRegisterSuccess(
+        savedUser.email,
+        savedUser.name,
+        // savedUser.role,
+      );
+    } catch (error) {
+      console.error('Send mail failed:', error);
+    }
+
     const { password, ...result } = savedUser;
 
     return {
@@ -110,8 +129,12 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken);
-      const newPayload = { email: payload.email, sub: payload.sub, role: payload.role };
-      
+      const newPayload = {
+        email: payload.email,
+        sub: payload.sub,
+        role: payload.role,
+      };
+
       return {
         success: true,
         access_token: this.jwtService.sign(newPayload, { expiresIn: '1h' }),
@@ -134,11 +157,14 @@ export class AuthService {
 
   // Change password
   async changePassword(userId: number, changePasswordDto: ChangePasswordDto) {
-    const { current_password, new_password, confirm_password } = changePasswordDto;
+    const { current_password, new_password, confirm_password } =
+      changePasswordDto;
 
     // Validate new password matches confirm password
     if (new_password !== confirm_password) {
-      throw new BadRequestException('Mật khẩu mới và xác nhận mật khẩu không khớp');
+      throw new BadRequestException(
+        'Mật khẩu mới và xác nhận mật khẩu không khớp',
+      );
     }
 
     // Get user
@@ -148,7 +174,10 @@ export class AuthService {
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(current_password, user.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      current_password,
+      user.password,
+    );
     if (!isCurrentPasswordValid) {
       throw new BadRequestException('Mật khẩu hiện tại không đúng');
     }

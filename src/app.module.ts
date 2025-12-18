@@ -10,6 +10,8 @@ import { UserModule } from './modules/user/user.module';
 import { CategoryModule } from './modules/category/category.module';
 import { ReviewModule } from './modules/review/review.module';
 import { VendorModule } from './modules/vendor/vendor.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+// import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { VendorModule } from './modules/vendor/vendor.module';
     CategoryModule,
     ReviewModule,
     VendorModule,
+    // MailModule,
+    MailerModule,
   ],
 })
 export class AppModule {}
